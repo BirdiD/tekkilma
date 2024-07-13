@@ -1,33 +1,35 @@
-<div align="center">
 
-<h1>Insanely-Fast-Whisper | Worker</h1>
+# Windanam but very fast
 
-[![CI | Test Handler](https://github.com/runpod-workers/worker-template/actions/workflows/CI-test_handler.yml/badge.svg)](https://github.com/runpod-workers/worker-template/actions/workflows/CI-test_handler.yml)
-&nbsp;
-[![CD | Build-Test-Release](https://github.com/runpod-workers/worker-template/actions/workflows/build-test-release.yml/badge.svg)](https://github.com/runpod-workers/worker-template/actions/workflows/build-test-release.yml)
+```bash
+docker build --platform linux/amd64 --tag yayasy/henyo-windanam:latest .
+```
 
-🚀 | Runpod worker for Insanely-Fast-Whisper.
+then push:
 
-</div>
-
-#### Build an Image:
-
-`docker build -t <your_dockerhub_directory>/image_name:tag`
+```bash
+docker push yayasy/henyo-windanam:latest
+```
 
 Ensure that you have Docker installed and properly set up before running the docker build commands. Once built, you can deploy this serverless worker in your desired environment with confidence that it will automatically scale based on demand.
 
-## Test Inputs
+# Test Inputs
 
 The following inputs can be used for testing the model:
 
-```json
-{
+```bash
+curl --request POST \                      
+     --url https://api.runpod.ai/v2/f1y2pncaxioyu8/runsync \
+     --header "accept: application/json" \
+     --header "authorization: L5P64411WDOWJVEDYOX75103OZBHNHZQE0QW7RG9" \
+     --header "content-type: application/json" \
+     --data '{
   "input": {
-    "audio": "https://github.com/runpod-workers/sample-inputs/raw/main/audio/gettysburg.wav",
-    "batch_size": 24, (Number of parallel batches you want to compute. Reduce if you face OOMs. (default: 24))
-    "chunk_length": 30,
-    "task": "transcribe", (Task to perform: transcribe or translate to another language. (default: transcribe))
-    "language": None, (Language of the input audio. (default: "None" (Whisper auto-detects the language)))
+    "audio": "https://github.com/cawoylel/Segmentation/raw/main/sample/SEGMENTED_Soundcloud_00699f7a-1369-425f-bac0-342dac55aa90_79_9975fbb0-b97c-11ee-85a4-42010a800004.wav",
+    "chunk_length": 16,
+    "batch_size": 24,
+    "language": "ha",
+    "model": "cawoylel/windanam_whisper-medium"
   }
 }
 ```
