@@ -17,6 +17,7 @@ Ensure that you have Docker installed and properly set up before running the doc
 
 The following inputs can be used for testing the model:
 
+- Audio URL as input
 ```bash
 curl --request POST \                      
      --url https://api.runpod.ai/v2/f1y2pncaxioyu8/runsync \
@@ -25,7 +26,24 @@ curl --request POST \
      --header "content-type: application/json" \
      --data '{
   "input": {
-    "audio": "https://github.com/cawoylel/Segmentation/raw/main/sample/SEGMENTED_Soundcloud_00699f7a-1369-425f-bac0-342dac55aa90_79_9975fbb0-b97c-11ee-85a4-42010a800004.wav",
+    "audio_url": "https://github.com/cawoylel/Segmentation/raw/main/sample/SEGMENTED_Soundcloud_00699f7a-1369-425f-bac0-342dac55aa90_79_9975fbb0-b97c-11ee-85a4-42010a800004.wav",
+    "chunk_length": 16,
+    "batch_size": 24,
+    "language": "ha",
+    "model": "cawoylel/windanam_whisper-medium"
+  }
+}
+```
+- Recorded audio on the platform
+```bash
+curl --request POST \                      
+     --url https://api.runpod.ai/v2/f1y2pncaxioyu8/runsync \
+     --header "accept: application/json" \
+     --header "authorization: L5P64411WDOWJVEDYOX75103OZBHNHZQE0QW7RG9" \
+     --header "content-type: application/json" \
+     --data '{
+  "input": {
+    "audio_base64": "encoded_base64_audio_str_here",
     "chunk_length": 16,
     "batch_size": 24,
     "language": "ha",

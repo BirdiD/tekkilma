@@ -14,3 +14,4 @@ accelerate
 optimum
 ipython-autotime
 flash-attn
+librosa

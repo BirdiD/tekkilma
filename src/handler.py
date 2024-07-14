@@ -10,6 +10,9 @@ from transformers import (
     WhisperForConditionalGeneration,
     pipeline
 )
+import base64
+import io
+import librosa
 
 
 def download_file(url, local_filename):
@@ -22,7 +25,15 @@ def download_file(url, local_filename):
     return local_filename
 
 
-def run_whisper_inference(audio_path, chunk_length, batch_size, language, task, model):
+def decode_base64_audio(base64_audio):
+    """Helper function to decode base64 audio."""
+    audio_bytes = base64.b64decode(base64_audio)
+    audio, sample_rate = librosa.load(io.BytesIO(audio_bytes))
+    if sample_rate != 16000:
+        audio = librosa.resample(audio, orig_sr=sample_rate, target_sr=16000)
+    return audio
+
+def run_whisper_inference(audio_input, chunk_length, batch_size, language, task, model):
     """Run Whisper model inference on the given audio file."""
     model_id = model
     torch_dtype = torch.float16
@@ -56,7 +67,7 @@ def run_whisper_inference(audio_path, chunk_length, batch_size, language, task, 
 
     # Run the transcription
     outputs = pipe(
-        audio_path,
+        audio_input,
         chunk_length_s=chunk_length,
         batch_size=batch_size,
         generate_kwargs={"task": task, "language": language},
@@ -68,27 +79,27 @@ def run_whisper_inference(audio_path, chunk_length, batch_size, language, task, 
 
 def handler(job):
     job_input = job['input']
-    audio_url = job_input["audio"]
     chunk_length = job_input["chunk_length"]
     batch_size = job_input["batch_size"]
     language = job_input["language"] if "language" in job_input else None
     task = job_input["task"] if "task" in job_input else "transcribe"
     model = job_input["model"] if "model" in job_input else "openai/whisper-large-v3"
 
-    if audio_url:
-        # Download the audio file
-        # TODO: use a unique filename id and supports youtube links.
-        audio_file_path = download_file(audio_url, 'downloaded_audio.wav')
-
-        # Run Whisper model inference
-        result = run_whisper_inference(
-            audio_file_path, chunk_length, batch_size, language, task, model)
-        # Cleanup: Remove the downloaded file
-        os.remove(audio_file_path)
-
-        return result
+    audio_input = None
+    if "audio_url" in job_input:
+        audio_input = download_file(job_input["audio_url"], 'downloaded_audio.wav')
+    elif "audio_base64" in job_input:
+        audio_input = decode_base64_audio(job_input["audio_base64"])
     else:
-        return "No audio URL provided."
+        return "No audio input provided. Please provide either 'audio_url' or 'audio_base64'."
 
+    result = run_whisper_inference(
+            audio_input, chunk_length, batch_size, language, task, model)
+    
+    # Cleanup: Remove the downloaded file if it exists
+    if os.path.exists(audio_input):
+        os.remove(audio_input)
+
+    return result
 
 runpod.serverless.start({"handler": handler})
