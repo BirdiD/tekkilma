@@ -13,5 +13,5 @@ git+https://github.com/huggingface/transformers
 accelerate
 optimum
 ipython-autotime
-flash-attn
+flash-attn==0.2.4
 librosa
