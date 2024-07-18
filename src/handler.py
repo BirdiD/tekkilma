@@ -10,9 +10,11 @@ from transformers import (
     WhisperForConditionalGeneration,
     pipeline
 )
-import base64
-import io
 import librosa
+import numpy as np
+from io import BytesIO
+from pydub import AudioSegment
+import base64
 
 
 def download_file(url, local_filename):
@@ -25,13 +27,21 @@ def download_file(url, local_filename):
     return local_filename
 
 
-def decode_base64_audio(base64_audio):
+def decode_base64_audio(base64_audio, codec = "opus"):
     """Helper function to decode base64 audio."""
     audio_bytes = base64.b64decode(base64_audio)
-    audio, sample_rate = librosa.load(io.BytesIO(audio_bytes))
-    if sample_rate != 16000:
-        audio = librosa.resample(audio, orig_sr=sample_rate, target_sr=16000)
-    return audio
+    opus_data = BytesIO(audio_bytes)
+    audiosegment = AudioSegment.from_file(opus_data, codec=codec)
+
+    if audiosegment.channels==2:
+      audiosegment = audiosegment.set_channels(1)
+
+    samples = audiosegment.get_array_of_samples()
+    sample_all = librosa.util.buf_to_float(samples,n_bytes=2,
+                                      dtype=np.float32)
+    if audiosegment.frame_rate != 16000:
+        sample_all = librosa.resample(sample_all, orig_sr=audiosegment.frame_rate, target_sr=16000)
+    return sample_all
 
 def run_whisper_inference(audio_input, chunk_length, batch_size, language, task, model):
     """Run Whisper model inference on the given audio file."""
