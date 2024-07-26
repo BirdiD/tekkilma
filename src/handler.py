@@ -26,7 +26,14 @@ def download_file(url, local_filename):
                 f.write(chunk)
     return local_filename
 
-
+def download_recording(base64_audio, local_filename):
+    """Download the recording in wav format"""
+    decoded_audio = base64.b64decode(base64_audio)
+    audio_bytes = BytesIO(decoded_audio)
+    audiosegment = AudioSegment.from_file(audio_bytes)
+    audiosegment.export(local_filename, format="wav")
+    return local_filename
+    
 def decode_base64_audio(base64_audio, codec = "opus"):
     """Helper function to decode base64 audio."""
     audio_bytes = base64.b64decode(base64_audio)
@@ -99,7 +106,8 @@ def handler(job):
     if "audio_url" in job_input:
         audio_input = download_file(job_input["audio_url"], 'downloaded_audio.wav')
     elif "audio_base64" in job_input:
-        audio_input = decode_base64_audio(job_input["audio_base64"])
+        #audio_input = decode_base64_audio(job_input["audio_base64"])
+        audio_input = download_recording(job_input["audio_base64"], 'downloaded_audio.wav')
     else:
         return "No audio input provided. Please provide either 'audio_url' or 'audio_base64'."
 
