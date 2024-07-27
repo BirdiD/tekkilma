@@ -15,6 +15,7 @@ import numpy as np
 from io import BytesIO
 from pydub import AudioSegment
 import base64
+import re
 
 
 def download_file(url, local_filename):
@@ -33,7 +34,11 @@ def download_recording(base64_audio, local_filename):
     audiosegment = AudioSegment.from_file(audio_bytes)
     audiosegment.export(local_filename, format="wav")
     return local_filename
-    
+
+def clean_base64(base64_string):
+    cleaned_string = re.sub(r'^data:application/octet-stream;base64,', '', base64_string)
+    return cleaned_string
+
 def decode_base64_audio(base64_audio, codec = "opus"):
     """Helper function to decode base64 audio."""
     audio_bytes = base64.b64decode(base64_audio)
@@ -107,7 +112,8 @@ def handler(job):
         audio_input = download_file(job_input["audio_url"], 'downloaded_audio.wav')
     elif "audio_base64" in job_input:
         #audio_input = decode_base64_audio(job_input["audio_base64"])
-        audio_input = download_recording(job_input["audio_base64"], 'downloaded_audio.wav')
+        clean_base64_string = clean_base64(job_input["audio_base64"])
+        audio_input = download_recording(clean_base64_string, 'downloaded_audio.wav')
     else:
         return "No audio input provided. Please provide either 'audio_url' or 'audio_base64'."
 
