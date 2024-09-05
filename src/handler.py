@@ -225,7 +225,7 @@ def handler(job):
                 os.remove(audio_input)
 
         if action == 'translate':
-            source_language = job_input["source_language"]
+            source_language = job_input["source_language"] if job_input["source_language"] else "Fula"
             target_language = job_input["target_language"]
             translation = translator.translate(result, source_language, target_language)
             return translation
