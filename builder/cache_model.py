@@ -4,9 +4,11 @@ from transformers import (
     WhisperFeatureExtractor,
     WhisperTokenizerFast,
     WhisperForConditionalGeneration,
-    pipeline
+    pipeline,
+    AutoProcessor
 )
 
+token = os.environ.get('HUGGING_FACE_HUB_WRITE_TOKEN')
 
 def fetch_pretrained_model(model_class, model_name, **kwargs):
     '''
@@ -43,12 +45,15 @@ def get_model(model_id, device, torch_dtype):
     model = fetch_pretrained_model(
         WhisperForConditionalGeneration,
         model_id,
-        torch_dtype=torch_dtype
+        torch_dtype=torch_dtype,
+        revision = 'e27f768494e4a3bf69b7a68b5fcc701abc1449e2',
+        token=token
     ).to(device)
-    tokenizer = WhisperTokenizerFast.from_pretrained(model_id)
-    feature_extractor = WhisperFeatureExtractor.from_pretrained(model_id)
-    get_pipeline(model, tokenizer, feature_extractor, torch_dtype, device)
-    return model, tokenizer, feature_extractor
+    processor = AutoProcessor.from_pretrained(model_id, token=token)
+    #tokenizer = WhisperTokenizerFast.from_pretrained(model_id)
+    #feature_extractor = WhisperFeatureExtractor.from_pretrained(model_id)
+    get_pipeline(model, processor.tokenizer, processor.feature_extractor, torch_dtype, device)
+    return model, processor.tokenizer, processor.feature_extractor
 
 
 if __name__ == "__main__":
@@ -56,6 +61,6 @@ if __name__ == "__main__":
         print(f"HF_HOME is set to {os.environ.get('HF_HOME')}")
         raise ValueError("HF_HOME must be set to /cache/huggingface")
 
-    get_model("cawoylel/windanam_whisper-medium",
+    get_model("cawoylel/mawdo-windanam",
               "cuda:0" if torch.cuda.is_available() else "cpu",
               torch.float16)
