@@ -19,7 +19,12 @@ import re
 import json
 from anthropic import AnthropicVertex, Anthropic
 
-
+def extract_final_translation(text):
+    last_number = re.findall(r'\d+\)', text)[-1]
+    final_part = text.split(last_number)[-1].strip()
+    final_translation = re.sub(r'^[:\s]+', '', final_part).split(":")[-1]
+    return final_translation
+    
 class Translator:
     """
     Use Claude API through GCP or directly with Anthropic to translate a sentence
@@ -207,7 +212,7 @@ def handler(job):
         source_language = job_input["source_language"]
         target_language = job_input["target_language"]
         translation = translator.translate(text_input, source_language, target_language)
-        return translation
+        return extract_final_translation(translation)
 
     # Handle audio and transcription/translation
 
@@ -228,7 +233,7 @@ def handler(job):
             source_language = job_input["source_language"] if job_input["source_language"] else "Fula"
             target_language = job_input["target_language"]
             translation = translator.translate(result, source_language, target_language)
-            return translation
+            return extract_final_translation(translation)
 
         else:
             return result
