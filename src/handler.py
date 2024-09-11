@@ -16,99 +16,6 @@ from io import BytesIO
 from pydub import AudioSegment
 import base64
 import re
-import json
-from anthropic import AnthropicVertex, Anthropic
-
-def extract_final_translation(text):
-    last_number = re.findall(r'\d+\)', text)[-1]
-    final_part = text.split(last_number)[-1].strip()
-    final_translation = re.sub(r'^[:\s]+', '', final_part).split(":")[-1]
-    return final_translation
-    
-class Translator:
-    """
-    Use Claude API through GCP or directly with Anthropic to translate a sentence
-    Perform the translation GCP or Anthropic and if it fails (server overloaded), try with the other solution
-    """
-
-    def __init__(self):
-        self.gcp_project_id = os.getenv("GCP_PROJECT_ID")
-        self.gcp_location = os.getenv("GCP_LOCATION")
-        self.anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
-        self._credentials_file_path = "/tmp/gcp_credentials.json"
-
-        if not os.path.exists(self._credentials_file_path):
-            gcp_service_account_json = os.getenv("GCP_CREDENTIALS")  
-            if gcp_service_account_json:
-                credentials_dict = json.loads(gcp_service_account_json)
-                
-                with open(self._credentials_file_path, 'w') as f:
-                    json.dump(credentials_dict, f)
-                
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self._credentials_file_path
-        
-        self.vertex_client = AnthropicVertex(
-            region=self.gcp_location, project_id=self.gcp_project_id
-        )
-        self.anthropic_client = Anthropic(api_key=self.anthropic_api_key)
-
-    def translate(self, sentence, source_lan, target_lan):
-        result = self._translate_with_anthropic(sentence, source_lan, target_lan)
-        if result:
-            return result
-        result = self._translate_with_vertex(sentence, source_lan, target_lan)
-        if result:
-            return result
-        return "Mi ronkii firtude"
-
-    def _translate_with_vertex(self, sentence, source_lan, target_lan):
-        prompt = self._create_prompt(sentence, source_lan, target_lan)
-
-        try:
-            message = self.vertex_client.messages.create(
-                max_tokens=2048,
-                messages=[{"role": "user", "content": prompt}],
-                model="claude-3-5-sonnet@20240620",
-                temperature=0.01,
-            )
-            return message.content[0].text
-        except Exception as e:
-            print(f"AnthropicVertex translation failed: {e}")
-            return
-
-    def _translate_with_anthropic(self, sentence, source_lan, target_lan):
-        prompt = self._create_prompt(sentence, source_lan, target_lan)
-
-        try:
-            message = self.anthropic_client.messages.create(
-                model="claude-3-5-sonnet-20240620",
-                max_tokens=2048,
-                messages=[{"role": "user", "content": f"{prompt}"}],
-                temperature=0.01,
-            )
-            return message.content[0].text
-        except Exception as e:
-            print(f"Anthropic translation failed: {e}")
-            return
-
-    def _create_prompt(self, sentence, source_lan, target_lan):
-        return f"""You are a professional translator with expert-level fluency in Fula, English, and French. Your task is to provide a precise and accurate translation of the given sentence from {source_lan} to {target_lan}.
-
-        Please adhere to the following guidelines:
-        1. Translate the sentence faithfully, preserving its original meaning, tone, and nuance.
-        2. Pay attention to idiomatic expressions and cultural context in both the source and target languages.
-        3. Maintain the original sentence structure when possible, but prioritize natural expression in the target language.
-        4. If the source sentence contains specialized terminology, translate it accurately using the appropriate terms in the target language.
-        5. Ensure proper grammar, spelling, and punctuation in the target language.
-        6. Do not add any explanations, notes, or additional text to your translation.
-
-        Before translating, follow the following steps;
-        1) Explain what means each word/expression in the text in {source_lan}.
-        2) Propose a reformulation of the text in the {source_lan} language without additional content while keeping all the meaning of the original text.
-        3) Then translate the whole text in {target_lan} language using the results of step 1 and 2.
-
-        Sentence to translate from {source_lan} to {target_lan}: {sentence}
-        """
 
 def download_file(url, local_filename):
     """Helper function to download a file from a URL."""
@@ -203,16 +110,8 @@ def handler(job):
     action = job_input["action"]
 
     audio_input = None
-    text_input = None
     result = None
 
-    # Handle text translation
-    if 'text' in job_input:
-        text_input = job_input["text"]
-        source_language = job_input["source_language"]
-        target_language = job_input["target_language"]
-        translation = translator.translate(text_input, source_language, target_language)
-        return extract_final_translation(translation)
 
     # Handle audio and transcription/translation
 
@@ -229,13 +128,7 @@ def handler(job):
         if os.path.exists(audio_input):
                 os.remove(audio_input)
 
-        if action == 'translate':
-            source_language = job_input["source_language"] if job_input["source_language"] else "Fula"
-            target_language = job_input["target_language"]
-            translation = translator.translate(result, source_language, target_language)
-            return extract_final_translation(translation)
-
-        else:
-            return result
+        return result
+        
 
 runpod.serverless.start({"handler": handler})

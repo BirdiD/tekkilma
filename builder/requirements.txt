@@ -16,6 +16,4 @@ ipython-autotime
 flash-attn==0.2.4
 librosa
 pydub
-anthropic
-google-cloud-aiplatform
 huggingface_hub
