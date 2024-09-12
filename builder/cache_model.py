@@ -51,14 +51,14 @@ def get_model(model_id, device, torch_dtype):
     ).to(device)
     
     logger.info("Fetching processor")
-    processor = AutoProcessor.from_pretrained(model_id, token=token)
+    #processor = AutoProcessor.from_pretrained(model_id, token=token)
     
     logger.info("Initializing pipeline")
-    #tokenizer = WhisperTokenizerFast.from_pretrained(model_id)
-    #feature_extractor = WhisperFeatureExtractor.from_pretrained(model_id)
-    get_pipeline(model, processor.tokenizer, processor.feature_extractor, torch_dtype, device)
+    tokenizer = WhisperTokenizerFast.from_pretrained(model_id)
+    feature_extractor = WhisperFeatureExtractor.from_pretrained(model_id)
+    get_pipeline(model, tokenizer, feature_extractor, torch_dtype, device)
     
-    return model, processor.tokenizer, processor.feature_extractor
+    return model, tokenizer, feature_extractor
 
 if __name__ == "__main__":
     if os.environ.get("HF_HOME") != "/cache/huggingface":
