@@ -99,19 +99,14 @@ def run_whisper_inference(audio_input, chunk_length, batch_size, language, task,
 
 
 def handler(job):
-
-    translator = Translator()
     job_input = job['input']
-    chunk_length = job_input["chunk_length"]
-    batch_size = job_input["batch_size"]
-    language = job_input["language"] if "language" in job_input else None
+    chunk_length = job_input["chunk_length"] if 'chunk_length' in job_input else 16
+    batch_size = job_input["batch_size"] if 'batch_size' in job_input else 24
+    language = job_input["language"] if "language" in job_input else "ha"
     task = job_input["task"] if "task" in job_input else "transcribe"
-    model = job_input["model"] if "model" in job_input else "openai/whisper-large-v3"
-    action = job_input["action"]
+    model = job_input["model"] if "model" in job_input else "cawoylel/mawdo-windanam"
 
     audio_input = None
-    result = None
-
 
     # Handle audio and transcription/translation
 
@@ -119,7 +114,6 @@ def handler(job):
         audio_input = download_file(job_input["audio_url"], 'downloaded_audio.wav')
         
     elif "audio_base64" in job_input:
-        #audio_input = decode_base64_audio(job_input["audio_base64"])
         clean_base64_string = clean_base64(job_input["audio_base64"])
         audio_input = download_recording(clean_base64_string, 'downloaded_audio.wav')
 
