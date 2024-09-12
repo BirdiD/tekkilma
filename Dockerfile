@@ -3,7 +3,6 @@ FROM runpod/pytorch:1.13.0-py3.10-cuda11.7.1-devel
 
 ARG HUGGING_FACE_HUB_WRITE_TOKEN
 ENV HUGGING_FACE_HUB_WRITE_TOKEN=$HUGGING_FACE_HUB_WRITE_TOKEN
-ENV HF_HUB_OFFLINE=1
 ENV HF_HOME="/cache/huggingface"
 ENV HF_DATASETS_CACHE="/cache/huggingface/datasets"
 ENV DEFAULT_HF_METRICS_CACHE="/cache/huggingface/metrics"
