@@ -54,7 +54,7 @@ def decode_base64_audio(base64_audio, codec = "opus"):
         sample_all = librosa.resample(sample_all, orig_sr=audiosegment.frame_rate, target_sr=16000)
     return sample_all
 
-def run_whisper_inference(audio_input, chunk_length, batch_size, language, task, model):
+def run_whisper_inference(audio_input, chunk_length, batch_size, task, model):
     """Run Whisper model inference on the given audio file."""
     model_id = model
     torch_dtype = torch.float16
@@ -91,7 +91,7 @@ def run_whisper_inference(audio_input, chunk_length, batch_size, language, task,
         audio_input,
         chunk_length_s=chunk_length,
         batch_size=batch_size,
-        generate_kwargs={"task": task, "language": language},
+        generate_kwargs={"task": task},
         return_timestamps=True,
     )
 
@@ -102,7 +102,7 @@ def handler(job):
     job_input = job['input']
     chunk_length = job_input["chunk_length"] if 'chunk_length' in job_input else 16
     batch_size = job_input["batch_size"] if 'batch_size' in job_input else 24
-    language = job_input["language"] if "language" in job_input else "ha"
+    #language = job_input["language"] if "language" in job_input else "ha"
     task = job_input["task"] if "task" in job_input else "transcribe"
     model = job_input["model"] if "model" in job_input else "cawoylel/mawdo-windanam-3000"
 
