@@ -104,7 +104,7 @@ def handler(job):
     batch_size = job_input["batch_size"] if 'batch_size' in job_input else 24
     language = job_input["language"] if "language" in job_input else "ha"
     task = job_input["task"] if "task" in job_input else "transcribe"
-    model = job_input["model"] if "model" in job_input else "cawoylel/mawdo-windanam"
+    model = job_input["model"] if "model" in job_input else "cawoylel/mawdo-windanam-3000"
 
     audio_input = None
 

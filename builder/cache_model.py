@@ -46,7 +46,6 @@ def get_model(model_id, device, torch_dtype):
         WhisperForConditionalGeneration,
         model_id,
         torch_dtype=torch_dtype,
-        revision='e27f768494e4a3bf69b7a68b5fcc701abc1449e2',
         token=token
     ).to(device)
     
@@ -70,7 +69,7 @@ if __name__ == "__main__":
     logger.info(f"Using device: {device}")
     
     try:
-        get_model("cawoylel/mawdo-windanam", device, torch.float16)
+        get_model("cawoylel/mawdo-windanam-3000", device, torch.float16)
         logger.info("Model caching completed successfully")
     except Exception as e:
         logger.error(f"An error occurred during model caching: {str(e)}")
