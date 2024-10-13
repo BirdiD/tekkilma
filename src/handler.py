@@ -108,8 +108,8 @@ def handler(event):
             audio_input = f'{str(uuid.uuid4())}_{filename}'
             audio_file.save(audio_input)
 
-            chunk_length = request.form.get("chunk_length") if request.form.get("chunk_length") else chunk_length
-            batch_size = request.form.get("batch_size") if request.form.get("chunk_length") else batch_size
+            chunk_length = int(request.form.get("chunk_length")) if request.form.get("chunk_length") else chunk_length
+            batch_size = int(request.form.get("batch_size")) if request.form.get("chunk_length") else batch_size
             model = request.form.get("model") if request.form.get("chunk_length") else model
         else:
             # Regular JSON input case
