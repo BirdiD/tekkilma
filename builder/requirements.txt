@@ -18,3 +18,4 @@ librosa
 pydub
 huggingface_hub
 Werkzeug
+flask

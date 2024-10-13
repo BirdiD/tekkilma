@@ -17,7 +17,9 @@ from pydub import AudioSegment
 import base64
 import re
 import uuid
-from werkzeug.datastructures import FileStorage
+#from werkzeug.datastructures import FileStorage
+from flask import request, jsonify
+from werkzeug.utils import secure_filename
 import logging
 
 
@@ -96,13 +98,19 @@ def handler(event):
         batch_size = 24
         model = "cawoylel/mawdo-windanam-3000"
 
+        audio_input = None
+
         # Determine if the event contains multipart form-data or JSON input
-        if isinstance(event.get('audio_file'), FileStorage):
+        if "audio_file" not in request.files:
             # Multipart form data case
-            audio_file = event['audio_file']
-            chunk_length = int(event.get("chunk_length", chunk_length))
-            batch_size = int(event.get("batch_size", batch_size))
-            model = event.get("model", model)
+            audio_file = request.files["audio_file"]
+            filename = secure_filename(audio_file.filename)
+            audio_input = f'{str(uuid.uuid4())}_{filename}'
+            audio_file.save(audio_input)
+
+            chunk_length = request.form.get("chunk_length") if request.form.get("chunk_length") else chunk_length
+            batch_size = request.form.get("batch_size") if request.form.get("chunk_length") else batch_size
+            model = request.form.get("model") if request.form.get("chunk_length") else model
         else:
             # Regular JSON input case
             job_input = event.get('input', {})
@@ -110,20 +118,14 @@ def handler(event):
             batch_size = int(job_input.get("batch_size", batch_size))
             model = job_input.get("model", model)
 
-        audio_input = None
-
-        # Process the audio file or download it if specified
-        if audio_file and isinstance(audio_file, FileStorage):
-            audio_input = f'{str(uuid.uuid4())}.wav'
-            audio_file.save(audio_input)
-        elif 'audio_url' in job_input:
-            audio_input = download_file(job_input["audio_url"], f'{str(uuid.uuid4())}.wav')
-        elif 'audio_base64' in job_input:
-            clean_base64_string = clean_base64(job_input["audio_base64"])
-            audio_input = download_recording(clean_base64_string, f'{str(uuid.uuid4())}.wav')
-        else:
-            logging.error("No valid audio input provided.")
-            return "No valid audio input provided."
+            if 'audio_url' in job_input:
+                audio_input = download_file(job_input["audio_url"], f'{str(uuid.uuid4())}.wav')
+            elif 'audio_base64' in job_input:
+                clean_base64_string = clean_base64(job_input["audio_base64"])
+                audio_input = download_recording(clean_base64_string, f'{str(uuid.uuid4())}.wav')
+            else:
+                logging.error("No valid audio input provided.")
+                return "No valid audio input provided."
 
         # Run the Whisper inference if audio input is available
         if audio_input is not None:
