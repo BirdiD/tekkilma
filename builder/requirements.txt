@@ -17,3 +17,4 @@ flash-attn==0.2.4
 librosa
 pydub
 huggingface_hub
+Werkzeug
