@@ -91,30 +91,54 @@ def run_whisper_inference(audio_input, chunk_length, batch_size, model):
 
 
 def handler(event):
-    audio_input = None
+    try:
+        audio_file = None
+        job_input = {}
+        chunk_length = 16
+        batch_size = 24
+        model = "cawoylel/mawdo-windanam-3000"
 
-    job_input = event.get('input', {})
-    chunk_length = int(job_input.get("chunk_length", 16))
-    batch_size = int(job_input.get("batch_size", 24))
-    model = job_input.get("model", "cawoylel/mawdo-windanam-3000")
+        audio_input = None
 
-    if 'audio_url' in job_input:
-        audio_input = download_file(job_input["audio_url"], f'{str(uuid.uuid4())}.wav')
-    elif 'audio_base64' in job_input:
-        clean_base64_string = clean_base64(job_input["audio_base64"])
-        audio_input = download_recording(clean_base64_string, f'{str(uuid.uuid4())}.wav')
-    else:
-        logging.error("No valid audio input provided.")
-        return "No valid audio input provided."
+        # Determine if the event contains multipart form-data or JSON input
+        if "audio_file" not in request.files:
+            # Multipart form data case
+            audio_file = request.files["audio_file"]
+            filename = secure_filename(audio_file.filename)
+            audio_input = f'{str(uuid.uuid4())}_{filename}'
+            audio_file.save(audio_input)
 
-    # Run the Whisper inference if audio input is available
-    if audio_input is not None:
-        result = run_whisper_inference(audio_input, chunk_length, batch_size, model)
-        if os.path.exists(audio_input):
-            os.remove(audio_input)
+            chunk_length = int(request.form.get("chunk_length")) if request.form.get("chunk_length") else chunk_length
+            batch_size = int(request.form.get("batch_size")) if request.form.get("chunk_length") else batch_size
+            model = request.form.get("model") if request.form.get("chunk_length") else model
+        else:
+            # Regular JSON input case
+            job_input = event.get('input', {})
+            chunk_length = int(job_input.get("chunk_length", chunk_length))
+            batch_size = int(job_input.get("batch_size", batch_size))
+            model = job_input.get("model", model)
+
+            if 'audio_url' in job_input:
+                audio_input = download_file(job_input["audio_url"], f'{str(uuid.uuid4())}.wav')
+            elif 'audio_base64' in job_input:
+                clean_base64_string = clean_base64(job_input["audio_base64"])
+                audio_input = download_recording(clean_base64_string, f'{str(uuid.uuid4())}.wav')
+            else:
+                logging.error("No valid audio input provided.")
+                return "No valid audio input provided."
+
+        # Run the Whisper inference if audio input is available
+        if audio_input is not None:
+            result = run_whisper_inference(audio_input, chunk_length, batch_size, model)
+            if os.path.exists(audio_input):
+                os.remove(audio_input)
             return result
         else:
             logging.error("Failed to process audio input.")
             return "Failed to process audio input."
+
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+        return f"An internal error occurred: {str(e)}"
 
 runpod.serverless.start({"handler": handler})
