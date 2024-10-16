@@ -17,10 +17,8 @@ from pydub import AudioSegment
 import base64
 import re
 import uuid
-#from werkzeug.datastructures import FileStorage
-from flask import request, jsonify
-from werkzeug.utils import secure_filename
 import logging
+import tempfile
 
 
 def download_file(url, local_filename):
@@ -31,6 +29,21 @@ def download_file(url, local_filename):
             for chunk in r.iter_content(chunk_size=8192):
                 f.write(chunk)
     return local_filename
+
+def base64_to_tempfile(base64_file: str) -> str:
+    '''
+    Convert base64 file to tempfile.
+
+    Parameters:
+    base64_file (str): Base64 file
+
+    Returns:
+    str: Path to tempfile
+    '''
+    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
+        temp_file.write(base64.b64decode(base64_file))
+
+    return temp_file.name
 
 def download_recording(base64_audio, local_filename):
     """Download the recording in wav format"""
@@ -93,7 +106,7 @@ def run_whisper_inference(audio_input, chunk_length, batch_size, model):
 def handler(event):
     audio_input = None
 
-    job_input = event.get('input', {})
+    job_input = event['input']
     chunk_length = int(job_input.get("chunk_length", 16))
     batch_size = int(job_input.get("batch_size", 24))
     model = job_input.get("model", "cawoylel/mawdo-windanam-3000")
@@ -101,8 +114,9 @@ def handler(event):
     if 'audio_url' in job_input:
         audio_input = download_file(job_input["audio_url"], f'{str(uuid.uuid4())}.wav')
     elif 'audio_base64' in job_input:
-        clean_base64_string = clean_base64(job_input["audio_base64"])
-        audio_input = download_recording(clean_base64_string, f'{str(uuid.uuid4())}.wav')
+        audio_input = base64_to_tempfile(job_input['audio_base64'])
+        #clean_base64_string = clean_base64(job_input["audio_base64"])
+        #audio_input = download_recording(clean_base64_string, f'{str(uuid.uuid4())}.wav')
     else:
         logging.error("No valid audio input provided.")
         return "No valid audio input provided."
