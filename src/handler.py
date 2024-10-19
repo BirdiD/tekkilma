@@ -92,12 +92,20 @@ def run_whisper_inference(audio_input, chunk_length, batch_size, model):
     )
 
     # Run the transcription
+    generate_kwargs = {
+                        "temperature": 0.7,
+                        "do_sample": True,
+                        "num_beams": 10,
+                        "top_p": 0.6,
+                        "top_k": 5,
+                        "task": "transcribe"
+                    }
     outputs = pipe(
         audio_input,
         chunk_length_s=chunk_length,
         batch_size=batch_size,
-        #generate_kwargs={"task": task},
-        return_timestamps=True,
+        generate_kwargs=generate_kwargs,
+        return_timestamps=False,
     )
 
     return outputs["text"]
