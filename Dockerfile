@@ -1,4 +1,4 @@
-FROM runpod/pytorch:1.13.0-py3.10-cuda11.7.1-devel
+FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel
 
 ENV HF_HOME="/cache/huggingface"
 ENV HF_DATASETS_CACHE="/cache/huggingface/datasets"
