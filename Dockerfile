@@ -1,3 +1,4 @@
+FROM nvidia/cuda:11.8.0-devel-ubi8
 FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel
 
 ENV HF_HOME="/cache/huggingface"
@@ -14,8 +15,6 @@ RUN apt-get update && apt-get install -y ffmpeg
 
 
 RUN mkdir -p /cache/huggingface/hub/tekkilma-24000
-
-ENV CUDA_VISIBLE_DEVICES=""
 
 COPY builder/requirements.txt /requirements.txt
 RUN pip install --upgrade pip && \
