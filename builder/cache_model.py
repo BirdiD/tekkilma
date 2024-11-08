@@ -1,4 +1,5 @@
 import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '' 
 import torch
 from unsloth import FastLanguageModel
 import torch
@@ -43,8 +44,8 @@ def get_model():
     
     logger.info("Saving model to disk")
 
-    model.save_pretrained("workspace/tekkilma-24000") # Local saving
-    tokenizer.save_pretrained("workspace/tekkilma-24000")    
+    tokenizer.save_pretrained("/cache/huggingface/hub/tekkilma-24000")
+    model.save_pretrained("/cache/huggingface/hub/tekkilma-24000")
     
     return model, tokenizer
 
