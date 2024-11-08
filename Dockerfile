@@ -1,8 +1,6 @@
 # Base image
 FROM runpod/pytorch:2.1.0-py3.10-cuda11.8.0-devel-ubuntu22.04
 
-ENV PYTHONUNBUFFERED=1
-ENV DEBIAN_FRONTEND=noninteractive
 ENV HF_HOME="/cache/huggingface"
 ENV HF_DATASETS_CACHE="/cache/huggingface/datasets"
 ENV DEFAULT_HF_METRICS_CACHE="/cache/huggingface/metrics"
