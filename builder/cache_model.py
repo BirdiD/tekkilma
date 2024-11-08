@@ -1,25 +1,34 @@
 import os
 import torch
-from transformers import (
-    WhisperFeatureExtractor,
-    WhisperTokenizerFast,
-    WhisperForConditionalGeneration,
-    pipeline,
-    AutoProcessor
-)
+from unsloth import FastLanguageModel
+import torch
+
+
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-token = os.environ.get('HUGGING_FACE_HUB_WRITE_TOKEN')
 
-def fetch_pretrained_model(model_class, model_name, **kwargs):
+def load_unsloth():
+  max_seq_length = 8192
+  dtype = None
+  load_in_4bit = True
+  model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name = "Soyno/tekkilma-24000",
+    max_seq_length = max_seq_length,
+    dtype = dtype,
+    load_in_4bit = load_in_4bit,
+    )
+  return model, tokenizer
+
+def fetch_pretrained_model():
     max_retries = 3
     for attempt in range(max_retries):
         try:
             logger.info(f"Attempting to fetch model {model_name}, attempt {attempt + 1}")
-            return model_class.from_pretrained(model_name, **kwargs)
+            model, tokenizer = load_unsloth()
+            return model, tokenizer
         except OSError as err:
             if attempt < max_retries - 1:
                 logger.warning(f"Error encountered: {err}. Retrying attempt {attempt + 1} of {max_retries}...")
@@ -27,37 +36,17 @@ def fetch_pretrained_model(model_class, model_name, **kwargs):
                 logger.error(f"Failed to fetch model after {max_retries} attempts. Error: {err}")
                 raise
 
-def get_pipeline(model, tokenizer, feature_extractor, torch_dtype, device):
-    logger.info("Initializing pipeline")
-    pipe = pipeline(
-        "automatic-speech-recognition",
-        model=model,
-        tokenizer=tokenizer,
-        feature_extractor=feature_extractor,
-        model_kwargs={"use_flash_attention_2": True},
-        torch_dtype=torch_dtype,
-        device=device,
-    )
-    return pipe
 
-def get_model(model_id, device, torch_dtype):
-    logger.info(f"Fetching model: {model_id}")
-    model = fetch_pretrained_model(
-        WhisperForConditionalGeneration,
-        model_id,
-        torch_dtype=torch_dtype,
-        token=token
-    ).to(device)
+def get_model():
+    logger.info(f"Fetching model and Tokenizers")
+    model, tokenizer = fetch_pretrained_model()
     
-    logger.info("Fetching processor")
-    #processor = AutoProcessor.from_pretrained(model_id, token=token)
+    logger.info("Saving model to disk")
+
+    model.save_pretrained("workspace/tekkilma-24000") # Local saving
+    tokenizer.save_pretrained("workspace/tekkilma-24000")    
     
-    logger.info("Initializing pipeline")
-    tokenizer = WhisperTokenizerFast.from_pretrained(model_id)
-    feature_extractor = WhisperFeatureExtractor.from_pretrained(model_id)
-    get_pipeline(model, tokenizer, feature_extractor, torch_dtype, device)
-    
-    return model, tokenizer, feature_extractor
+    return model, tokenizer
 
 if __name__ == "__main__":
     if os.environ.get("HF_HOME") != "/cache/huggingface":
@@ -65,11 +54,9 @@ if __name__ == "__main__":
         raise ValueError("HF_HOME must be set to /cache/huggingface")
     
     logger.info("Starting model caching process")
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    logger.info(f"Using device: {device}")
-    
+
     try:
-        get_model("cawoylel/mawdo-windanam-3000", device, torch.float16)
+        get_model()
         logger.info("Model caching completed successfully")
     except Exception as e:
         logger.error(f"An error occurred during model caching: {str(e)}")

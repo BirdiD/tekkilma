@@ -3,140 +3,62 @@
 import runpod
 import requests
 import os
+from unsloth import FastLanguageModel
 import torch
-from transformers import (
-    WhisperFeatureExtractor,
-    WhisperTokenizerFast,
-    WhisperForConditionalGeneration,
-    pipeline
-)
-import librosa
-import numpy as np
-from io import BytesIO
-from pydub import AudioSegment
-import base64
 import re
-import uuid
-import logging
-import tempfile
+
+def extract_assistant_content(text):
+    pattern = r'<\|start_header_id\|>assistant<\|end_header_id\|>\n(.*?)<\|eot_id\|>'
+    match = re.search(pattern, text, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return ''
 
 
-def download_file(url, local_filename):
-    """Helper function to download a file from a URL."""
-    with requests.get(url, stream=True) as r:
-        r.raise_for_status()
-        with open(local_filename, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
-    return local_filename
+def run_inference(system_prompt, sentence):
 
-def base64_to_tempfile(base64_file: str) -> str:
-    '''
-    Convert base64 file to tempfile.
+    max_seq_length = 8192
+    dtype = None
+    load_in_4bit = True
+    model, tokenizer = FastLanguageModel.from_pretrained(
+        model_name = "workspace/tekkilma-24000",
+        max_seq_length = max_seq_length,
+        dtype = dtype,
+        load_in_4bit = load_in_4bit,
+        local_files_only = True,
+        )
 
-    Parameters:
-    base64_file (str): Base64 file
+    FastLanguageModel.for_inference(model)
 
-    Returns:
-    str: Path to tempfile
-    '''
-    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as temp_file:
-        temp_file.write(base64.b64decode(base64_file))
+    messages_1 = [
+                {"role": "system", "content": f"{system_prompt}"},
+                {"role": "user", "content": f"{sentence}"}
+            ]
 
-    return temp_file.name
-
-def download_recording(base64_audio, local_filename):
-    """Download the recording in wav format"""
-    decoded_audio = base64.b64decode(base64_audio)
-    audio_bytes = BytesIO(decoded_audio)
-    audiosegment = AudioSegment.from_file(audio_bytes)
-    audiosegment.export(local_filename, format="wav")
-    return local_filename
-
-def clean_base64(base64_string):
-    cleaned_string = re.sub(r'^data:application/octet-stream;base64,', '', base64_string)
-    return cleaned_string
-
-
-
-def run_whisper_inference(audio_input, chunk_length, batch_size, model):
-    """Run Whisper model inference on the given audio file."""
-    model_id = model
-    torch_dtype = torch.float16
-    device = "cuda:0" if torch.cuda.is_available() else "cpu"
-    model_cache = "/cache/huggingface/hub"
-    local_files_only = True
-    # Load the model, tokenizer, and feature extractor
-    model = WhisperForConditionalGeneration.from_pretrained(
-        model_id,
-        torch_dtype=torch_dtype,
-        cache_dir=model_cache,
-        local_files_only=local_files_only,
-    ).to(device)
-    tokenizer = WhisperTokenizerFast.from_pretrained(
-        model_id, cache_dir=model_cache, local_files_only=local_files_only
-    )
-    feature_extractor = WhisperFeatureExtractor.from_pretrained(
-        model_id, cache_dir=model_cache, local_files_only=local_files_only
-    )
-
-    # Initialize the pipeline
-    pipe = pipeline(
-        "automatic-speech-recognition",
-        model=model,
-        tokenizer=tokenizer,
-        feature_extractor=feature_extractor,
-        model_kwargs={"use_flash_attention_2": True},
-        torch_dtype=torch_dtype,
-        device=device,
-    )
-
-    # Run the transcription
-    generate_kwargs = {
-                        "temperature": 0.7,
-                        "do_sample": True,
-                        "num_beams": 10,
-                        "top_p": 0.6,
-                        "top_k": 5,
-                        "task": "transcribe"
-                    }
-    outputs = pipe(
-        audio_input,
-        chunk_length_s=chunk_length,
-        batch_size=batch_size,
-        generate_kwargs=generate_kwargs,
-        return_timestamps=False,
-    )
-
-    return outputs["text"]
-
+    inputs = tokenizer.apply_chat_template(
+                messages_1,
+                tokenize = True,
+                add_generation_prompt = True,
+                return_tensors = "pt",
+            ).to("cuda")
+    
+    outputs = model.generate(input_ids = inputs, max_new_tokens = 8192, temperature=0.01, use_cache = True)
+    raw_text = tokenizer.batch_decode(outputs)[0]
+    return raw_text
 
 def handler(event):
-    audio_input = None
-
     job_input = event['input']
-    chunk_length = int(job_input.get("chunk_length", 16))
-    batch_size = int(job_input.get("batch_size", 24))
-    model = job_input.get("model", "cawoylel/mawdo-windanam-3000")
+    system_prompt = job_input.get("system_prompt")
+    sentence = job_input.get("sentence")
 
-    if 'audio_url' in job_input:
-        audio_input = download_file(job_input["audio_url"], f'{str(uuid.uuid4())}.wav')
-    elif 'audio_base64' in job_input:
-        audio_input = base64_to_tempfile(job_input['audio_base64'])
-        #clean_base64_string = clean_base64(job_input["audio_base64"])
-        #audio_input = download_recording(clean_base64_string, f'{str(uuid.uuid4())}.wav')
-    else:
-        logging.error("No valid audio input provided.")
-        return "No valid audio input provided."
+
 
     # Run the Whisper inference if audio input is available
-    if audio_input is not None:
-        result = run_whisper_inference(audio_input, chunk_length, batch_size, model)
-        if os.path.exists(audio_input):
-            os.remove(audio_input)
-            return result
-        else:
-            logging.error("Failed to process audio input.")
-            return "Failed to process audio input."
+    if sentence is not None:
+        result = run_inference(system_prompt, sentence)
+        return result
+    else:
+        ogging.error("Failed to process audio input.")
+        return "Failed to process audio input."
 
 runpod.serverless.start({"handler": handler})
